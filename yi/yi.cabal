@@ -191,6 +191,7 @@ library
     Yi.Lexer.Perl
     Yi.Lexer.Python
     Yi.Lexer.Ruby
+    Yi.Lexer.Scheme
     Yi.Lexer.Srmc
     Yi.Lexer.SVNCommit
     Yi.Lexer.Whitespace
@@ -429,7 +430,7 @@ executable yi
 
   if flag(dochack)
     buildable: False
-  
+
   if flag(profiling)
     cpp-options: -DPROFILING
 
@@ -457,4 +458,3 @@ Test-Suite test-suite
     filepath,
     directory,
     yi
-

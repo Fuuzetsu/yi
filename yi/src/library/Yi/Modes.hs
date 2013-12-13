@@ -6,7 +6,7 @@ module Yi.Modes (TokenBasedMode, fundamentalMode,
                  extensionOrContentsMatch, linearSyntaxMode,
                  svnCommitMode, hookModes, applyModeHooks,
                  lookupMode, whitespaceMode, removeAnnots,
-                 gitCommitMode, rubyMode
+                 gitCommitMode, rubyMode, schemeMode
                 ) where
 
 import Prelude ()
@@ -37,6 +37,7 @@ import qualified Yi.Lexer.Python     as Python
 import qualified Yi.Lexer.Java       as Java
 import qualified Yi.Lexer.JSON       as JSON
 import qualified Yi.Lexer.Ruby       as Ruby
+import qualified Yi.Lexer.Scheme     as Scheme
 import qualified Yi.Lexer.Srmc       as Srmc
 import qualified Yi.Lexer.SVNCommit  as SVNCommit
 import qualified Yi.Lexer.GitCommit  as GitCommit
@@ -50,11 +51,11 @@ type StyleBasedMode = TokenBasedMode StyleName
 fundamentalMode :: Mode syntax
 svnCommitMode, cMode, objectiveCMode, cppMode, cabalMode,
   srmcMode, ottMode, gnuMakeMode, perlMode, pythonMode,
-  javaMode, jsonMode, rubyMode :: StyleBasedMode
+  javaMode, jsonMode, rubyMode, schemeMode :: StyleBasedMode
 ocamlMode :: TokenBasedMode OCaml.Token
 
 fundamentalMode = emptyMode
-  { 
+  {
    modeName = "fundamental",
    modeApplies = modeAlwaysApplies,
    modeIndent = const autoIndentB,
@@ -72,8 +73,8 @@ linearSyntaxMode :: forall lexerState t.
                                                            Alex.AlexInput)))
                                                 -> (t -> StyleName)
                                                 -> Mode (Tree (Tok t))
-linearSyntaxMode initSt scanToken tokenToStyle 
-    = fundamentalMode { 
+linearSyntaxMode initSt scanToken tokenToStyle
+    = fundamentalMode {
                         modeHL = ExtHL $ Driver.mkHighlighter (IncrParser.scanner OnlineTree.manyToks . lexer),
                         modeGetStrokes = tokenBasedStrokes tokenToStroke
                       }
@@ -85,7 +86,7 @@ removeAnnots m = m { modeName = modeName m ++ " no annots", modeGetAnnotations =
 
 cMode = (linearSyntaxMode C.initState C.alexScanToken id)
   {
-    modeApplies = anyExtension ["c", "h"], 
+    modeApplies = anyExtension ["c", "h"],
     modeName = "c"
   }
 
@@ -97,7 +98,7 @@ objectiveCMode = (linearSyntaxMode ObjectiveC.initState ObjectiveC.alexScanToken
 
 cppMode = (linearSyntaxMode Cplusplus.initState Cplusplus.alexScanToken id)
   {
-    modeApplies = anyExtension ["cxx", "cpp", "hxx"], 
+    modeApplies = anyExtension ["cxx", "cpp", "hxx"],
     modeName = "c++"
   }
 
@@ -112,7 +113,7 @@ cabalMode = (linearSyntaxMode Cabal.initState Cabal.alexScanToken id)
 srmcMode = (linearSyntaxMode Srmc.initState Srmc.alexScanToken id)
   {
     modeName = "srmc",
-    modeApplies = anyExtension ["pepa", -- pepa is a subset of srmc    
+    modeApplies = anyExtension ["pepa", -- pepa is a subset of srmc
                                 "srmc"]
   }
 
@@ -127,7 +128,7 @@ gitCommitMode = (linearSyntaxMode GitCommit.initState GitCommit.alexScanToken id
 svnCommitMode = (linearSyntaxMode SVNCommit.initState SVNCommit.alexScanToken id)
   {
     modeName = "svn-commit",
-    modeApplies = \path _contents -> isPrefixOf "svn-commit" path && extensionMatches ["tmp"] path 
+    modeApplies = \path _contents -> isPrefixOf "svn-commit" path && extensionMatches ["tmp"] path
   }
 
 ocamlMode = (linearSyntaxMode OCaml.initState OCaml.alexScanToken OCaml.tokenToStyle)
@@ -164,6 +165,12 @@ javaMode = (linearSyntaxMode Java.initState Java.alexScanToken id)
   {
     modeName = "java",
     modeApplies = anyExtension ["java"]
+  }
+
+schemeMode = (linearSyntaxMode Scheme.initState Scheme.alexScanToken id)
+  {
+    modeName = "scheme",
+    modeApplies = anyExtension ["scm"]
   }
 
 jsonMode = (linearSyntaxMode JSON.initState JSON.alexScanToken id)
@@ -208,7 +215,6 @@ whitespaceMode = base
     where
       base = linearSyntaxMode Whitespace.initState Whitespace.alexScanToken id
 
-
 -- | Determines if the file's extension is one of the extensions in the list.
 extensionMatches :: [String] -> FilePath -> Bool
 extensionMatches extensions fileName = extension `elem` extensions'
@@ -243,4 +249,3 @@ applyModeHooks hs ms = flip map ms $ \am -> case filter (($am) . fst) hs of
 -- original mode, if it isn't the case.
 lookupMode :: AnyMode -> YiM AnyMode
 lookupMode am@(AnyMode m) = fromMaybe am <$> anyModeByNameM (modeName m)
-
