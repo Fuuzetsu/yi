@@ -29,6 +29,7 @@ import Data.List (isInfixOf)
 import Data.Proxy
 import qualified Data.List.PointedList.Circular as PL
 import Data.Maybe
+import Data.Monoid (mempty)
 import Data.String (IsString)
 import Data.Typeable
 import Data.Foldable (find)
@@ -47,7 +48,7 @@ import System.CanonicalizePath (replaceShorthands)
 -- string. If you don't need this just supply @return ()@
 spawnMinibufferE :: String -> KeymapEndo -> EditorM BufferRef
 spawnMinibufferE prompt kmMod =
-    do b <- stringToNewBuffer (Left prompt) ""
+    do b <- stringToNewBuffer (Left prompt) mempty
        -- Now create the minibuffer keymap and switch to the minibuffer window
        withGivenBuffer0 b $
          modifyMode $ \m -> m { modeKeymap = \kms -> kms { topKeymap = kmMod (insertKeymap kms)

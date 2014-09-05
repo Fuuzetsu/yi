@@ -5,19 +5,18 @@ module Yi.Boot (yi, yiDriver, reload) where
 
 import qualified Config.Dyre as Dyre
 import qualified Config.Dyre.Options as Dyre
-import Config.Dyre.Relaunch
-import Control.Monad.State
-import Control.Monad.Base
-import qualified Data.Rope as R
-import System.Environment
-import System.Exit
-
-import Yi.Config
-import Yi.Editor
-import Yi.Keymap
-import Yi.Main
+import           Config.Dyre.Relaunch
+import           Control.Monad.Base
+import           Control.Monad.State
+import           Data.Rope (fromString)
+import           System.Environment
+import           System.Exit
+import           Yi.Config
+import           Yi.Editor
+import           Yi.Keymap
+import           Yi.Main
+import           Yi.Paths (getCustomConfigPath)
 import qualified Yi.UI.Common as UI
-import Yi.Paths (getCustomConfigPath)
 
 -- | once the custom yi is compiled this restores the editor state (if requested) then proceeds to
 -- run the editor.
@@ -33,7 +32,7 @@ realMain configs = do
 -- output.
 showErrorsInConf :: (Config, ConsoleConfig) -> String -> (Config, ConsoleConfig)
 showErrorsInConf (conf, confcon) errs
-    = (conf { initialActions = makeAction (splitE >> newBufferE (Left "*errors*") (R.fromString errs)) : initialActions conf }
+    = (conf { initialActions = makeAction (splitE >> newBufferE (Left "*errors*") (fromString errs)) : initialActions conf }
       , confcon)
 
 yi, yiDriver :: Config -> IO ()

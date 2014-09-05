@@ -20,6 +20,7 @@
 
 module Yi.UI.Pango (start, startGtkHook) where
 
+
 import           Prelude hiding (error, elem, mapM_, foldl, concat, mapM)
 import           Control.Exception (catch, SomeException)
 import           Control.Concurrent
@@ -32,10 +33,11 @@ import           Data.List (intercalate)
 import qualified Data.List.PointedList as PL (moveTo)
 import qualified Data.List.PointedList.Circular as PL
 import           Data.Maybe
+import           Data.Monoid (mempty)
 import           Data.Foldable
 import           Data.Traversable
 import qualified Data.Map as M
-import qualified Data.Rope as Rope
+import           Data.Rope (toString)
 import           Graphics.UI.Gtk hiding (Region, Window, Action , Point,
                                Style, Modifier, on)
 import qualified Graphics.UI.Gtk as Gtk
@@ -51,6 +53,7 @@ import           Yi.Event
 import           Yi.Keymap
 import           Yi.Layout(DividerPosition, DividerRef)
 import           Yi.Monad
+import           Yi.RopeUtils
 import           Yi.Style
 import           Yi.Tab
 import qualified Yi.UI.Common as Common
@@ -652,12 +655,12 @@ updatePango ui font w b layout = do
         rope     <- streamB Forward from
         p        <- pointB
         bufEnd     <- sizeB
-        let content = fst $ Rope.splitAtLine winh rope
+        let content = fst $ splitAtLine winh rope
         -- allow BOS offset to be just after the last line
-        let addNL = if Rope.countNewLines content == winh
+        let addNL = if countLines content == winh
                         then id
                         else (++"\n")
-        return (from, bufEnd, p, addNL $ Rope.toString content)
+        return (from, bufEnd, p, addNL $ toString content)
 
   if configLineWrap $ uiConfig ui
     then do oldWidth <- layoutGetWidth layout

@@ -40,10 +40,11 @@ import Control.Applicative
 import Control.Lens hiding (views, Action)
 import Data.Foldable
 import Data.Maybe (maybe, fromJust, fromMaybe)
+import Data.Monoid (mempty)
 import Data.IORef
 import Data.List (nub, filter, drop, zip, take, length)
 import Data.Prototype
-import qualified Data.Rope as Rope
+import Data.Rope (toString, fromString)
 import qualified Data.Map as Map
 import Yi.Core (startEditor, focusAllSyntax)
 import Yi.Buffer
@@ -89,6 +90,7 @@ import Control.Concurrent (newMVar, modifyMVar, MVar, newEmptyMVar, putMVar,
 import Data.Typeable
 import qualified Data.List.PointedList as PL (insertRight, withFocus,
                                               PointedList(..), singleton)
+import Yi.RopeUtils
 import Yi.Regex
 import System.FilePath
 import qualified Yi.UI.Common as Common
@@ -288,12 +290,12 @@ updatePango e v b layout = do
                               from <- (use . markPointA) =<< fromMark <$> askMarks
                               rope <- streamB Forward from
                               p    <- pointB
-                              let content = fst $ Rope.splitAtLine winh rope
+                              let content = fst $ splitAtLine winh rope
                               -- allow BOS offset to be just after the last line
-                              let addNL = if Rope.countNewLines content == winh
+                              let addNL = if countLines content == winh
                                               then id
                                               else (++"\n")
-                              return (from, p, addNL $ Rope.toString content)
+                              return (from, p, addNL $ toString content)
 
   config   <- liftYi askCfg
   if configLineWrap $ configUI config
@@ -471,7 +473,7 @@ data Iter = Iter
 
 newBuffer :: BufferId -> String -> ControlM Buffer
 newBuffer id text = do
-    fBufRef <- liftYi $ withEditor $ newBufferE id $ Rope.fromString text
+    fBufRef <- liftYi $ withEditor $ newBufferE id $ fromString text
     return Buffer{..}
 
 newView :: Buffer -> FontDescription -> ControlM View
@@ -555,9 +557,9 @@ newView buffer font = do
     --                        from     <- getMarkPointB =<< fromMark <$> askMarks
     --                        rope     <- streamB Forward from
     --                        p        <- pointB
-                let content = fst $ Rope.splitAtLine winh rope
+                let content = fst $ splitAtLine winh rope
                 -- allow BOS offset to be just after the last line
-                let addNL = if Rope.countNewLines content == winh
+                let addNL = if countLines content == winh
                               then id
                               else (++"\n")
                     sty = configStyle $ configUI config
@@ -565,7 +567,7 @@ newView buffer font = do
                           --   (mkRegion tos bos)
                           -- return (from, p, addNL $ Rope.toString content,
                           --         picture)
-                let text = addNL $ Rope.toString content
+                let text = addNL $ toString content
 
                 picture <- attributesPictureAndSelB sty Nothing
                            (mkRegion tos bos)

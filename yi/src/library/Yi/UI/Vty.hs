@@ -16,7 +16,7 @@ import Control.Concurrent
 import Control.Exception
 import Control.Monad.State (evalState, get, put)
 import Control.Monad.Base
-import Control.Lens hiding (wrapped,set)
+import Control.Lens hiding (set)
 import Data.Char (ord,chr)
 import Data.IORef
 import Data.List (partition, sort, nub)
@@ -33,7 +33,6 @@ import System.Posix.IO (stdInput)
 import Yi.Buffer
 import Yi.Editor
 import Yi.Event
-import Yi.Style
 import qualified Yi.UI.Common as Common
 import Yi.Config
 import Yi.Window
@@ -42,6 +41,7 @@ import Graphics.Vty as Vty hiding (Config(..), refresh, Default, text)
 import qualified Graphics.Vty as Vty
 import Yi.Keymap (makeAction, YiM)
 import Yi.Debug
+import Yi.Style
 import Yi.Utils
 import Yi.Monad
 import Yi.UI.Utils

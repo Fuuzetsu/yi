@@ -60,6 +60,7 @@ import           Data.Foldable (find)
 import           Data.List hiding (find, maximum, concat)
 import qualified Data.Map as M
 import           Data.Maybe
+import           Data.Monoid (mempty)
 import           Data.Time
 import           Data.Time.Clock.POSIX
 import           Data.Typeable
@@ -361,7 +362,7 @@ diredDirBuffer d = do
     -- Emacs doesn't follow symlinks, probbably Yi shouldn't do too
     dir <- io $ canonicalizePath d
     -- XXX Don't specify the path as the filename of the buffer.
-    b <- withEditor $ stringToNewBuffer (Left dir) ""
+    b <- withEditor $ stringToNewBuffer (Left dir) mempty
     withEditor $ switchToBufferE b
     withBuffer $ do
       bufferDynamicValueA %= (diredPathA .~ dir)

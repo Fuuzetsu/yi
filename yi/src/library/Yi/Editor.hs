@@ -45,8 +45,7 @@ import qualified Data.List.PointedList as PL (atEnd, moveTo)
 import qualified Data.List.PointedList.Circular as PL
 import qualified Data.Map as M
 import           Data.Maybe
-import           Data.Rope (Rope)
-import qualified Data.Rope as R
+import           Data.Rope (Rope, toString, fromString)
 import           Data.Semigroup
 import           Data.Typeable
 import           Prelude hiding (foldl,concatMap,foldr,all)
@@ -151,7 +150,7 @@ emptyEditor = Editor
   , maxStatusHeight = 1
   , onCloseActions = M.empty
   }
-  where buf = newB 0 (Left "console") ""
+  where buf = newB 0 (Left "console") mempty
         win = (dummyWindow (bkey buf)) { wkey = WindowRef 1 , isMini = False }
         tab = makeTab1 2 win
 
@@ -349,7 +348,7 @@ withGivenBufferAndWindow0 w k f = do
                in (e & buffersA .~ mapAdjust' (const b') k (buffers e)
                      & killringA %~
                         if accum && all updateIsDelete us
-                        then foldl (.) id $ reverse [ krPut dir (R.toString s)
+                        then foldl (.) id $ reverse [ krPut dir (toString s)
                                                     | Delete _ dir s <- us ]
                         else id
 
@@ -414,7 +413,7 @@ setTmpStatus delay s = do
 
   b <- case bs of
          (b':_) -> return $ bkey b'
-         [] -> stringToNewBuffer (Left "messages") ""
+         [] -> stringToNewBuffer (Left "messages") mempty
   withGivenBuffer0 b $ do botB; insertN (show s ++ "\n")
 
 
@@ -738,7 +737,7 @@ acceptedInputs = do
 acceptedInputsOtherWindow :: EditorM ()
 acceptedInputsOtherWindow = do
   ai <- acceptedInputs
-  b <- stringToNewBuffer (Left "keybindings") (R.fromString $ unlines ai)
+  b <- stringToNewBuffer (Left "keybindings") (fromString $ unlines ai)
   w <- newWindowE False b
   windowsA %= PL.insertRight w
 
@@ -840,6 +839,6 @@ newTempBufferE = do
       inc in_name = in_name & tmp_name_indexA +~ 1
       next_tmp_name = find_next hint
 
-  b <- newBufferE (Left $ show next_tmp_name) ""
+  b <- newBufferE (Left $ show next_tmp_name) mempty
   setDynamic $ inc next_tmp_name
   return b

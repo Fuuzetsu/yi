@@ -16,23 +16,24 @@ module Yi.File
   setFileName,
  ) where
 
+
 import Control.Applicative
-import Control.Monad.Reader (asks)
-import Control.Monad.Base
 import Control.Lens
-import Data.Time
+import Control.Monad.Base
+import Control.Monad.Reader (asks)
 import Data.Foldable (find)
+import Data.Monoid (mempty)
+import Data.Time
 import System.Directory
 import System.FilePath
 import System.FriendlyPath
-import qualified Data.Rope as R
-
 import Yi.Config
 import Yi.Core
 import Yi.Dired
-import Yi.Regex
-import Yi.Utils
 import Yi.Monad
+import Yi.Regex
+import Yi.RopeUtils
+import Yi.Utils
 
 -- | If file exists, read contents of file into a new buffer, otherwise
 -- creating a new empty buffer. Replace the current window with a new
@@ -65,7 +66,7 @@ editFile filename = do
     fileToNewBuffer :: FilePath -> YiM BufferRef
     fileToNewBuffer f = do
       now <- io getCurrentTime
-      contents <- io $ R.readFile f
+      contents <- io $ fileToRope f
 
       b <- withEditor $ stringToNewBuffer (Right f) contents
       withGivenBuffer b $ markSavedB now
@@ -74,7 +75,7 @@ editFile filename = do
 
     newEmptyBuffer :: FilePath -> YiM BufferRef
     newEmptyBuffer f =
-      withEditor $ stringToNewBuffer (Right f) ""
+      withEditor $ stringToNewBuffer (Right f) mempty
 
     setupMode :: FilePath -> BufferRef -> YiM BufferRef
     setupMode f b = do
@@ -100,7 +101,7 @@ revertE = do
             case mfp of
                      Just fp -> do
                              now <- io getCurrentTime
-                             s <- liftBase $ R.readFile fp
+                             s <- liftBase $ fileToRope fp
                              withBuffer $ revertB s now
                              msgEditor ("Reverted from " ++ show fp)
                      Nothing -> do
@@ -129,7 +130,7 @@ viWriteTo f = do
     bufInfo <- withBuffer bufInfoB
     let s   = bufInfoFileName bufInfo
     fwriteToE f
-    let message = (show f ++) (if f == s 
+    let message = (show f ++) (if f == s
                       then " written"
                       else " " ++ show s ++ " written")
     msgEditor message
@@ -151,7 +152,7 @@ fwriteBufferE :: BufferRef -> YiM ()
 fwriteBufferE bufferKey =
   do nameContents <- withGivenBuffer bufferKey ((,) <$> gets file <*> streamB Forward 0)
      case nameContents of
-       (Just f, contents) -> do liftBase $ R.writeFile f contents
+       (Just f, contents) -> do liftBase $ ropeToFile f contents
                                 now <- io getCurrentTime
                                 withGivenBuffer bufferKey (markSavedB now)
        (Nothing, _c)      -> msgEditor "Buffer not associated with a file"
@@ -181,4 +182,3 @@ setFileName :: BufferRef -> FilePath -> YiM ()
 setFileName b filename = do
   cfn <- liftBase $ userToCanonPath filename
   withGivenBuffer b $ assign identA $ Right cfn
-

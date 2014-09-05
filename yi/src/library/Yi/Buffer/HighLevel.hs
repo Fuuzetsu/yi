@@ -12,6 +12,7 @@
 -- High level operations on buffers.
 module Yi.Buffer.HighLevel where
 
+import qualified Codec.Binary.UTF8.Generic as G
 import           Control.Applicative
 import           Control.Lens hiding ((-~), (+~), re, transform)
 import           Control.Monad
@@ -20,8 +21,9 @@ import           Control.Monad.State hiding (forM, forM_, sequence_)
 import           Data.Char
 import           Data.List (isPrefixOf, sort, intersperse)
 import           Data.Maybe (fromMaybe, listToMaybe, catMaybes)
-import           Data.Rope (Rope)
-import qualified Data.Rope as R
+import           Data.Monoid (mconcat, mempty)
+import           Data.Rope (Rope, fromString, toString)
+import qualified Data.Rope (length)
 import           Data.Time (UTCTime)
 import           Data.Tuple (swap)
 import           Yi.Buffer.Basic
@@ -599,7 +601,7 @@ deleteBlankLinesB =
 -- | Get a (lazy) stream of lines in the buffer, starting at the /next/ line
 -- in the given direction.
 lineStreamB :: Direction -> BufferM [String]
-lineStreamB dir = drop 1 . fmap rev . lines' . R.toString <$> (streamB dir =<< pointB)
+lineStreamB dir = drop 1 . fmap rev . lines' . toString <$> (streamB dir =<< pointB)
     where rev = case dir of
                   Forward -> id
                   Backward -> reverse
@@ -738,8 +740,10 @@ sortLines = modifyExtendedSelectionB Line (onLines sort)
 revertB :: Rope -> UTCTime -> BufferM ()
 revertB s now = do
     r <- regionOfB Document
-    if R.length s <= smallBufferSize -- for large buffers, we must avoid building strings, because we'll end up using huge amounts of memory
-    then replaceRegionClever r (R.toString s)
+    -- for large buffers, we must avoid building strings, because
+    -- we'll end up using huge amounts of memory
+    if Data.Rope.length s <= smallBufferSize
+    then replaceRegionClever r (toString s)
     else replaceRegionB' r s
     markSavedB now
 
@@ -875,18 +879,18 @@ readRegionRopeWithStyleB reg Block = savingPointB $ do
     moveTo start
     chunks <- forM lengths $ \l ->
         if l == 0
-        then lineMoveRel 1 >> return R.empty
+        then lineMoveRel 1 >> return mempty
         else do
             p <- pointB
             r <- readRegionB' $ mkRegion p (p +~ Size l)
             void $ lineMoveRel 1
             return r
-    return $ R.concat $ intersperse "\n" chunks
+    return $ mconcat $ intersperse (fromString "\n") chunks
 readRegionRopeWithStyleB reg style = readRegionB' =<< convertRegionToStyleB reg style
 
 insertRopeWithStyleB :: Rope -> RegionStyle -> BufferM ()
 insertRopeWithStyleB rope Block = savingPointB $ do
-    let ls = R.split (fromIntegral (ord '\n')) rope
+    let ls = G.lines rope
         advanceLine = do
             bottom <- atLastLine
             if bottom

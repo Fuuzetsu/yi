@@ -2,22 +2,23 @@ module Yi.Keymap.Vim.NormalMap
     ( defNormalMap
     ) where
 
-import Control.Monad
 import Control.Applicative
 import Control.Lens hiding (re)
-import System.Directory (doesFileExist)
-
+import Control.Monad
 import Data.Char
-import Data.List (group, isPrefixOf)
+import Data.HashMap.Strict (singleton, lookup)
+import Data.List (group)
 import Data.Maybe (fromMaybe)
 import Data.Monoid
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Rope as R
-
+import Data.Rope (null, fromString, toString)
+import Prelude hiding (null, lookup)
+import System.Directory (doesFileExist)
 import Yi.Buffer hiding (Insert)
 import Yi.Editor
 import Yi.Event
+import Yi.File (editFile)
 import Yi.History
+import Yi.Keymap
 import Yi.Keymap.Keys
 import Yi.Keymap.Vim.Common
 import Yi.Keymap.Vim.Eval
@@ -26,15 +27,13 @@ import Yi.Keymap.Vim.Operator
 import Yi.Keymap.Vim.Search
 import Yi.Keymap.Vim.StateUtils
 import Yi.Keymap.Vim.StyledRegion
-import Yi.Keymap.Vim.Utils
 import Yi.Keymap.Vim.Tag
+import Yi.Keymap.Vim.Utils
 import Yi.MiniBuffer
 import Yi.Misc
+import Yi.Monad
 import Yi.Regex (seInput, makeSearchOptsM)
 import Yi.Search (getRegexE, isearchInitE, setRegexE, makeSimpleSearch)
-import Yi.Monad
-import Yi.Keymap
-import Yi.File (editFile)
 import Yi.Utils (io)
 
 mkDigitBinding :: Char -> VimBinding
@@ -152,7 +151,7 @@ pasteBefore = do
     register <- getRegisterE . vsActiveRegister =<< getDynamic
     case register of
         Nothing -> return ()
-        Just (Register LineWise rope) -> withBuffer0 $ unless (R.null rope) $
+        Just (Register LineWise rope) -> withBuffer0 $ unless (null rope) $
             -- Beware of edge cases ahead
             insertRopeWithStyleB (addNewLineIfNecessary rope) LineWise
         Just (Register style rope) -> withBuffer0 $ pasteInclusiveB rope style
@@ -396,7 +395,7 @@ openFileUnderCursor editorAction = do
         withEditor . fail $ "Can't find file \"" ++ fileName ++ "\""
     else do
         maybeM withEditor editorAction
-        void . editFile $ fileName 
+        void . editFile $ fileName
 
 recordMacroBinding :: VimBinding
 recordMacroBinding = VimBindingE f
@@ -415,10 +414,10 @@ finishRecordingMacroBinding = VimBindingE f
     where f "q" (VimState { vsMode = Normal
                           , vsCurrentMacroRecording = Just (macroName, macroBody) })
                 = WholeMatch $ do
-                      let reg = Register Exclusive (R.fromString (drop 2 macroBody))
+                      let reg = Register Exclusive (fromString (drop 2 macroBody))
                       modifyStateE $ \s ->
                           s { vsCurrentMacroRecording = Nothing
-                              , vsRegisterMap = HM.singleton macroName reg
+                              , vsRegisterMap = singleton macroName reg
                                               <> vsRegisterMap s
                               }
                       return Finish
@@ -431,10 +430,10 @@ playMacroBinding = VimBindingE f
                                , vsRegisterMap = registers
                                , vsCount = mbCount }) = WholeMatch $ do
               resetCountE
-              case HM.lookup c registers of
+              case lookup c registers of
                   Just (Register _ evs) -> do
                       let count = fromMaybe 1 mbCount
-                      scheduleActionStringForEval (concat (replicate count (R.toString evs)))
+                      scheduleActionStringForEval (concat (replicate count (toString evs)))
                       return Finish
                   Nothing -> return Drop
           f _ _ = NoMatch
@@ -446,4 +445,3 @@ withCount action = flip replicateM_ action =<< getCountE
 
 withCountOnBuffer0 :: BufferM () -> EditorM ()
 withCountOnBuffer0 action = withCount $ withBuffer0 action
-

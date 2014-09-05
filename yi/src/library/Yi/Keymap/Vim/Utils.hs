@@ -16,25 +16,25 @@ module Yi.Keymap.Vim.Utils
   , addVimJumpHereE
   ) where
 
+import Codec.Binary.UTF8.Generic (lines')
 import Control.Applicative
+import Control.Lens hiding (snoc)
 import Control.Monad
-import Control.Lens
 import Data.Char (isSpace)
 import Data.Foldable (asum)
 import Data.List (group)
-import Data.Maybe (maybe)
-import qualified Data.Rope as R
+import Data.Rope (Rope, snoc)
 import Safe (headDef)
-
 import Yi.Buffer hiding (Insert)
 import Yi.Editor
 import Yi.Event
 import Yi.Keymap
 import Yi.Keymap.Vim.Common
+import Yi.Keymap.Vim.EventUtils
 import Yi.Keymap.Vim.Motion
 import Yi.Keymap.Vim.StateUtils
-import Yi.Keymap.Vim.EventUtils
 import Yi.Monad
+import Yi.RopeUtils
 
 -- 'mkBindingE' and 'mkBindingY' are helper functions for bindings
 -- where VimState mutation is not dependent on action performed
@@ -167,16 +167,19 @@ indentBlockRegionB count reg = do
             void $ lineMoveRel i
     moveTo start
 
-pasteInclusiveB :: R.Rope -> RegionStyle -> BufferM ()
+pasteInclusiveB :: Rope -> RegionStyle -> BufferM ()
 pasteInclusiveB rope style = do
     p0 <- pointB
     insertRopeWithStyleB rope style
-    if R.countNewLines rope == 0 && style `elem` [Exclusive, Inclusive]
-    then leftB
-    else moveTo p0
+    let styleIn = style `elem` [ Exclusive, Inclusive ]
+    case lines' rope of
+      []  | styleIn -> leftB
+      -- This newline check is necessary because lines' will spit out
+      -- an element as long as there is something in the input, even
+      -- if it does not necessarily contain a newline in itself.
+      [x] | styleIn && trailingNewline x -> leftB
+      _ -> moveTo p0
 
-addNewLineIfNecessary :: R.Rope -> R.Rope
-addNewLineIfNecessary rope = if lastChar == '\n'
-                             then rope
-                             else R.append rope "\n"
-    where lastChar = head $ R.toString $ R.drop (R.length rope - 1) rope
+addNewLineIfNecessary :: Rope -> Rope
+addNewLineIfNecessary rope =
+  if trailingNewline rope then rope else rope `snoc` '\n'

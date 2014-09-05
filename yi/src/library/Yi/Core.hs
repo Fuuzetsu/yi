@@ -72,7 +72,6 @@ import           Data.List.Split (splitOn)
 import qualified Data.Map as M
 import           Data.Maybe
 import           Data.Monoid
-import qualified Data.Rope as R
 import           Data.Time
 import           Data.Time.Clock.POSIX
 import           Data.Traversable
@@ -95,6 +94,7 @@ import           Yi.KillRing (krEndCmd)
 import           Yi.Monad
 import           Yi.Process (createSubprocess, readAvailable,
                              SubprocessId, SubprocessInfo(..))
+import           Yi.RopeUtils
 import           Yi.String
 import           Yi.Style (errorStyle, strongHintStyle)
 import qualified Yi.UI.Common as UI
@@ -245,7 +245,7 @@ checkFileChanges e0 = do
                   modTime <- fileModTime fname
                   if b ^. lastSyncTimeA < modTime
                      then if isUnchangedBuffer b
-                       then do newContents <- R.readFile fname
+                       then do newContents <- fileToRope fname
                                return (snd $ runBuffer (dummyWindow $ bkey b) b (revertB newContents now), Just msg1)
                        else return (b, Just msg2)
                      else nothing
@@ -259,7 +259,6 @@ checkFileChanges e0 = do
           msg2 = (1, (["Disk version changed by a concurrent process"], strongHintStyle))
           visibleBuffers = fmap bufkey $ windows e0
           fileModTime f = posixSecondsToUTCTime . realToFrac . modificationTime <$> getFileStatus f
-
 
 -- | Hide selection, clear "syntax dirty" flag (as appropriate).
 clearAllSyntaxAndHideSelection :: Editor -> Editor
@@ -391,7 +390,7 @@ startSubprocess cmd args onExit = onYiVar $ \yi var -> do
         let (e', bufref) = runEditor
                               (yiConfig yi)
                               (printMsg ("Launched process: " ++ cmd)
-                               >> newBufferE (Left bufferName) "")
+                               >> newBufferE (Left bufferName) mempty)
                               (yiEditor var)
             procid = yiSubprocessIdSupply var + 1
         procinfo <- createSubprocess cmd args bufref

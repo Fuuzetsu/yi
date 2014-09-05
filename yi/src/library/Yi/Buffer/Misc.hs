@@ -180,42 +180,41 @@ module Yi.Buffer.Misc
   )
 where
 
-import Prelude hiding (foldr, mapM, notElem)
-import Yi.Region
-import System.FilePath
-import Yi.Buffer.Implementation
-import Yi.Syntax
-import Yi.Buffer.Undo
-import Yi.Dynamic
-import Yi.Window
-import Control.Monad.RWS.Strict hiding (mapM_, mapM, get, put, forM_, forM)
-import Control.Applicative
-import Control.Lens hiding ((+~), Action, reversed, at, act)
-import Data.Binary
-import Data.Default
+import           Control.Applicative
+import           Control.Lens hiding ((+~), Action, reversed, at, act)
+import           Control.Monad.RWS.Strict hiding (mapM_, mapM, get, put, forM_, forM)
+import           Data.Binary
+import           Data.Char(ord)
+import           Data.Default
 #if __GLASGOW_HASKELL__ < 708
-import Data.DeriveTH
+import           Data.DeriveTH
 #else
-import GHC.Generics (Generic)
+import           GHC.Generics (Generic)
 #endif
-import Data.Foldable
-import Data.Traversable
-import Data.Typeable
-import Data.Function hiding ((.), id)
-import Data.Rope (Rope)
-import qualified Data.Rope as R
+import           Data.Foldable
+import           Data.Function hiding ((.), id)
 import qualified Data.Map as M
-import Data.Maybe
-import {-# source #-} Yi.Keymap
-import Yi.Interact as I
-import Yi.Buffer.Basic
-import {-# SOURCE #-} Yi.Buffer.HighLevel
-import {-# SOURCE #-} Yi.MiniBuffer (withMinibufferFree)
-import Yi.Monad
-import Yi.Utils
-import Data.Time
-import Numeric(showHex)
-import Data.Char(ord)
+import           Data.Maybe
+import           Data.Rope (Rope, fromString, toString)
+import           Data.Time
+import           Data.Traversable
+import           Data.Typeable
+import           Numeric(showHex)
+import           Prelude hiding (foldr, mapM, notElem)
+import           System.FilePath
+import           Yi.Buffer.Basic
+import           Yi.Buffer.Implementation
+import           Yi.Buffer.Undo
+import           Yi.Dynamic
+import           Yi.Interact as I
+import           Yi.Monad
+import           Yi.Region
+import           Yi.Syntax
+import           Yi.Utils
+import           Yi.Window
+import           {-# SOURCE #-} Yi.Buffer.HighLevel
+import           {-# SOURCE #-} Yi.MiniBuffer (withMinibufferFree)
+import           {-# source #-} Yi.Keymap
 
 #ifdef TESTING
 -- TODO: make this compile.
@@ -720,10 +719,10 @@ nelemsB :: Int -> Point -> BufferM String
 nelemsB n i = queryBuffer $ nelemsBI n i
 
 nelemsB' :: Int -> Point -> BufferM Rope
-nelemsB' n i = fmap (R.take n) (streamB Forward i)
+nelemsB' n i = fromString . take n . toString <$> streamB Forward i
 
 streamB :: Direction -> Point -> BufferM Rope
-streamB dir i = queryBuffer (getStream dir i)
+streamB dir i = queryBuffer (fromString . getStream dir i)
 
 indexedStreamB :: Direction -> Point -> BufferM [(Point,Char)]
 indexedStreamB dir i = queryBuffer (getIndexedStream dir i)
@@ -800,7 +799,7 @@ insertNAt' rope pnt = applyUpdate (Insert pnt Forward rope)
 
 -- | Insert the list at specified point, extending size of buffer
 insertNAt :: String -> Point -> BufferM ()
-insertNAt cs = insertNAt' (R.fromString cs)
+insertNAt = insertNAt' . fromString
 
 -- | Insert the list at current point, extending size of buffer
 insertN :: String -> BufferM ()
@@ -818,8 +817,8 @@ insertB = insertN . return
 -- | @deleteNAt n p@ deletes @n@ characters forwards from position @p@
 deleteNAt :: Direction -> Int -> Point -> BufferM ()
 deleteNAt dir n pos = do
-  els <- R.take n <$> streamB Forward pos
-  applyUpdate (Delete pos dir els)
+  els <- take n . toString <$> streamB Forward pos
+  applyUpdate (Delete pos dir $ fromString els)
 
 
 ------------------------------------------------------------------------

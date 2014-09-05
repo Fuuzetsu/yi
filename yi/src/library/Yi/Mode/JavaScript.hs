@@ -24,6 +24,7 @@ import Data.Default
 import Data.Foldable as F (toList)
 import Data.List (nub)
 import Data.Maybe (isJust)
+import Data.Monoid (mempty)
 import Data.Typeable
 import System.FilePath.Posix (takeBaseName)
 import Yi.Buffer.Basic (BufferRef, Direction(..))
@@ -129,7 +130,7 @@ getJSBuffer = withOtherWindow $ do
 
 -- | Creates a new empty buffer and returns it.
 mkJSBuffer :: YiM BufferRef
-mkJSBuffer = withEditor $ stringToNewBuffer (Left "js") ""
+mkJSBuffer = withEditor $ stringToNewBuffer (Left "js") mempty
 
 -- | Given a filename, a BufferRef and a list of errors, prints the errors in
 --   that buffer.

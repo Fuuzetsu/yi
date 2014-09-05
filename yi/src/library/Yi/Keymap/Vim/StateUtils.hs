@@ -24,20 +24,18 @@ module Yi.Keymap.Vim.StateUtils
     , resetActiveRegisterE
     ) where
 
-import Control.Applicative
-import Control.Monad
-
+import           Control.Applicative
+import           Control.Monad
 import qualified Data.HashMap.Strict as HM
-import Data.Maybe (fromMaybe)
-import Data.Monoid
-import qualified Data.Rope as R
-
-import Yi.Buffer.Normal
-import Yi.Editor
-import Yi.Event
-import Yi.Keymap.Vim.Common
-import Yi.Keymap.Vim.EventUtils
-import Yi.Style (defaultStyle)
+import           Data.Maybe (fromMaybe)
+import           Data.Monoid
+import           Data.Rope (Rope)
+import           Yi.Buffer.Normal
+import           Yi.Editor
+import           Yi.Event
+import           Yi.Keymap.Vim.Common
+import           Yi.Keymap.Vim.EventUtils
+import           Yi.Style (defaultStyle)
 
 switchMode :: VimMode -> VimState -> VimState
 switchMode mode state = state { vsMode = mode }
@@ -108,7 +106,7 @@ dropTextObjectAccumulatorE = modifyStateE $ \s -> s { vsTextObjectAccumulator = 
 getRegisterE :: RegisterName -> EditorM (Maybe Register)
 getRegisterE name = fmap (HM.lookup name . vsRegisterMap) getDynamic
 
-setRegisterE :: RegisterName -> RegionStyle -> R.Rope -> EditorM ()
+setRegisterE :: RegisterName -> RegionStyle -> Rope -> EditorM ()
 setRegisterE name style rope = do
     rmap <- fmap vsRegisterMap getDynamic
     let rmap' = HM.insert name (Register style rope) rmap

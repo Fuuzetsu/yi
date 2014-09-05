@@ -3,6 +3,7 @@
 --
 module Vim.EditorManipulations.BufferExCommand (tests) where
 
+import           Data.Rope (fromString)
 import qualified Data.List.NonEmpty as NE
 import           Generic.TestUtils
 import           Test.Tasty (TestTree, testGroup)
@@ -17,9 +18,9 @@ type BufferName = String
 -- each.
 createInitialBuffers :: EditorM [(BufferRef, BufferName)]
 createInitialBuffers = do
-    one   <- newBufferE (Right "one")   "Buffer one"
-    two   <- newBufferE (Right "two")   "Buffer two"
-    three <- newBufferE (Right "three") "Buffer three"
+    one   <- newBufferE (Right "one")   (fromString "Buffer one")
+    two   <- newBufferE (Right "two")   (fromString "Buffer two")
+    three <- newBufferE (Right "three") (fromString "Buffer three")
     return [(one, "one"), (two, "two"), (three, "three")]
 
 
