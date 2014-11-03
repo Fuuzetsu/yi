@@ -17,7 +17,7 @@ import Yi.Keymap.Vim.Common
 data ExCommand = ExCommand {
     cmdComplete :: YiM [Text]
   , cmdIsPure :: Bool
-  , cmdAction :: Action
+  , cmdAction :: Action ()
   , cmdAcceptsRange :: Bool
   , cmdShow :: Text
 }

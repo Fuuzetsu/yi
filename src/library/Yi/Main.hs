@@ -129,7 +129,7 @@ getConfig shouldOpenInTabs (cfg, cfgcon) opt =
       Version       -> throwError $ Err versinfo ExitSuccess
       Debug         -> return (cfg { debugMode = True }, cfgcon)
       LineNo l      -> case startActions cfg of
-                         x : xs -> return (cfg { startActions = x:makeAction (gotoLn (read l)):xs }, cfgcon)
+                         x : xs -> return (cfg { startActions = x:makeAction (void $ gotoLn (read l)):xs }, cfgcon)
                          []     -> fail "The `-l' option must come after a file argument"
 
       File filename -> if shouldOpenInTabs && not (null (startActions cfg)) then

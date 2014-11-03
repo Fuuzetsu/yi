@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE RecursiveDo #-}
@@ -94,7 +95,7 @@ import           Yi.PersistentState (loadPersistentState, savePersistentState)
 
 -- | Make an action suitable for an interactive run.
 -- UI will be refreshed.
-interactive :: IsRefreshNeeded -> [Action] -> YiM ()
+interactive :: Show a => IsRefreshNeeded -> [Action a] -> YiM ()
 interactive isRefreshNeeded action = do
   evs <- withEditor $ use pendingEventsA
   logPutStrLn $ ">>> interactively" <> showEvs evs
@@ -184,7 +185,7 @@ startEditor cfg st = do
 --       Just i | i >= 5 -> return True
 --       _ -> threadDelay 1000000 >> return False
 -- @
-forkAction :: (YiAction a x, Show x)
+forkAction :: YiAction a ()
            => IO Bool
               -- ^ runs after we insert the action: this may be a
               -- thread delay or a thread suicide or whatever else;
@@ -207,8 +208,9 @@ recoverMode tbl buffer  = case fromMaybe (AnyMode emptyMode) (find (\(AnyMode m)
     AnyMode m -> setMode0 m buffer
   where oldName = case buffer of FBuffer {bmode = m} -> modeName m
 
-postActions :: IsRefreshNeeded -> [Action] -> YiM ()
-postActions refreshNeeded actions = do yi <- ask; liftBase $ yiOutput yi refreshNeeded actions
+postActions :: IsRefreshNeeded -> [Action ()] -> YiM ()
+postActions refreshNeeded actions =
+  ask >>= \yi -> liftBase $ yiOutput yi refreshNeeded actions
 
 -- | Display the errors buffer if it is not already visible.
 showErrors :: YiM ()
@@ -395,10 +397,12 @@ msgEditor :: T.Text -> YiM ()
 msgEditor "()" = return ()
 msgEditor s = printMsg s
 
-runAction :: Action -> YiM ()
-runAction (YiA act) = act >>= msgEditor . showT
-runAction (EditorA act) = withEditor act >>= msgEditor . showT
-runAction (BufferA act) = withCurrentBuffer act >>= msgEditor . showT
+runAction :: Show a => Action a -> YiM a
+runAction (YiA act) = act >>= \r -> msgEditor (showT r) >> return r
+runAction (EditorA act) =
+  withEditor act >>= \r -> msgEditor (showT r) >> return r
+runAction (BufferA act) =
+  withCurrentBuffer act >>= \r -> msgEditor (showT r) >> return r
 
 -- | Show an error on the status line and log it.
 errorEditor :: T.Text -> YiM ()
@@ -543,11 +547,11 @@ waitForExit ph =
           Nothing -> threadDelay (500*1000) >> waitForExit ph
           Just ec -> return (Right ec)
 
-withSyntax :: (Show x, YiAction a x) => (forall syntax. Mode syntax -> syntax -> a) -> YiM ()
+withSyntax :: (Show x, YiAction a x) => (forall syntax. Mode syntax -> syntax -> a) -> YiM x
 withSyntax f = do
-            b <- gets currentBuffer
-            act <- withGivenBuffer b $ withSyntaxB f
-            runAction $ makeAction act
+  b <- gets currentBuffer
+  act <- withGivenBuffer b $ withSyntaxB f
+  runAction $ makeAction act
 
 userForceRefresh :: YiM ()
 userForceRefresh = withUI UI.userForceRefresh

@@ -6,6 +6,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -77,26 +78,27 @@ import           Yi.Window
 
 -- TODO: refactor this!
 
-data Action = forall a. Show a => YiA (YiM a)
-            | forall a. Show a => EditorA (EditorM a)
-            | forall a. Show a => BufferA (BufferM a)
-            deriving Typeable
+data Action a where
+  YiA :: YiM a -> Action a
+  EditorA :: EditorM a -> Action a
+  BufferA :: BufferM a -> Action a
+  deriving (Typeable, Functor)
 
-emptyAction :: Action
+emptyAction :: Action ()
 emptyAction = BufferA (return ())
 
 class (Default a, Binary a, Typeable a) => YiVariable a
 class (Default a, Typeable a) => YiConfigVariable a
 
-instance Eq Action where
+instance Eq (Action a) where
     _ == _ = False
 
-instance Show Action where
+instance Show (Action a) where
     show (YiA _) = "@Y"
     show (EditorA _) = "@E"
     show (BufferA _) = "@B"
 
-type Interact ev a = I.I ev Action a
+type Interact ev a = I.I ev (Action ()) a
 
 type KeymapM a = Interact Event a
 
@@ -104,14 +106,14 @@ type Keymap = KeymapM ()
 
 type KeymapEndo = Keymap -> Keymap
 
-type KeymapProcess = I.P Event Action
+type KeymapProcess = I.P Event (Action ())
 
 data IsRefreshNeeded = MustRefresh | NoNeedToRefresh
     deriving (Show, Eq)
 
 data Yi = Yi { yiUi          :: UI Editor
              , yiInput       :: [Event] -> IO ()    -- ^ input stream
-             , yiOutput      :: IsRefreshNeeded -> [Action] -> IO ()   -- ^ output stream
+             , yiOutput      :: IsRefreshNeeded -> [Action ()] -> IO ()   -- ^ output stream
              , yiConfig      :: Config
                -- TODO: this leads to anti-patterns and seems like one itself
                -- too coarse for actual concurrency, otherwise pointless
@@ -292,7 +294,7 @@ data Mode syntax = Mode
     -- ^ emacs-style auto-indent line
   , modeAdjustBlock :: syntax -> Int -> BufferM ()
     -- ^ adjust the indentation after modification
-  , modeFollow :: syntax -> Action
+  , modeFollow :: syntax -> Action ()
     -- ^ Follow a \"link\" in the file. (eg. go to location of error message)
   , modeIndentSettings :: IndentSettings
   , modeToggleCommentSelection :: Maybe (BufferM ())
@@ -404,7 +406,7 @@ data UIConfig = UIConfig {
 
 
 type UIBoot = Config -> ([Event] -> IO ())
-              -> ([Action] -> IO ()) ->  Editor -> IO (UI Editor)
+              -> ([Action ()] -> IO ()) ->  Editor -> IO (UI Editor)
 
 -- | When should we use a "fat" cursor (i.e. 2 pixels wide, rather than 1)? Fat
 -- cursors have only been implemented for the Pango frontend.
@@ -418,9 +420,9 @@ data Config = Config {startFrontEnd :: UIBoot,
                       -- ^ UI to use.
                       configUI :: UIConfig,
                       -- ^ UI-specific configuration.
-                      startActions :: [Action],
+                      startActions :: [Action ()],
                       -- ^ Actions to run when the editor is started.
-                      initialActions :: [Action],
+                      initialActions :: [Action ()],
                       -- ^ Actions to run after startup (after startActions) or reload.
                       defaultKm :: KeymapSet,
                       -- ^ Default keymap to use.

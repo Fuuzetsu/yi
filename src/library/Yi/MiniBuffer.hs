@@ -28,6 +28,7 @@ module Yi.MiniBuffer ( spawnMinibufferE, withMinibufferFree, withMinibuffer
                      , anyModeName, (:::)(..), LineNumber, RegexTag
                      , FilePatternTag, ToKill, CommandArguments(..)
                      , commentRegion, promptingForBuffer, debugBufferContent
+                     , Promptable
                      ) where
 
 import           Control.Applicative
@@ -201,14 +202,15 @@ withMinibufferFree prompt = withMinibufferGen "" noHint prompt
 -- @on Typing@ is an extra action which will fire with every user
 -- key-press and receives minibuffer contents. Use something like
 -- @const $ return ()@ if you don't need this.
-withMinibufferGen :: T.Text -> (T.Text -> YiM [T.Text]) -> T.Text
+withMinibufferGen :: forall a. Show a => T.Text -> (T.Text -> YiM [T.Text])
+                  -> T.Text
                   -> (T.Text -> YiM T.Text) -> (T.Text -> YiM ())
-                  -> (T.Text -> YiM ()) -> YiM ()
+                  -> (T.Text -> YiM a) -> YiM ()
 withMinibufferGen proposal getHint prompt completer onTyping act = do
   initialBuffer <- gets currentBuffer
   initialWindow <- use currentWindowA
-  let innerAction :: YiM ()
-      -- ^ Read contents of current buffer (which should be the minibuffer), and
+  let innerAction :: YiM a
+      -- Read contents of current buffer (which should be the minibuffer), and
       -- apply it to the desired action
       closeMinibuffer = closeBufferAndWindowE >>
                         windowsA %= fromJust . PL.find initialWindow
@@ -251,7 +253,7 @@ withMinibufferGen proposal getHint prompt completer onTyping act = do
         $ replaceShorthands proposal
 
 -- | Open a minibuffer, given a finite number of suggestions.
-withMinibufferFin :: T.Text -> [T.Text] -> (T.Text -> YiM ()) -> YiM ()
+withMinibufferFin :: Show a => T.Text -> [T.Text] -> (T.Text -> YiM a) -> YiM ()
 withMinibufferFin prompt possibilities act
     = withMinibufferGen "" hinter prompt completer
       (const $ return ()) (act . best)
@@ -301,10 +303,13 @@ class Promptable a where
     getMinibuffer _ = withMinibufferFree
 
 doPrompt :: forall a. Promptable a => (a -> YiM ()) -> YiM ()
-doPrompt act = getMinibuffer witness (getPrompt witness `T.append` ":") (act <=< getPromptedValue)
+doPrompt act = getMinibuffer witness
+               (getPrompt witness `T.append` ":")
+               (act <=< getPromptedValue)
   where
-    witness = undefined
     witness :: Proxy a
+    witness = undefined
+
 
 instance Promptable String where
     getPromptedValue = return . T.unpack
@@ -399,7 +404,7 @@ matchingBufferNames = withEditor $ do
   bs <- gets bufferSet
   return $ fmap (shortIdentString $ length p) bs
 
-instance (YiAction a x, Promptable r) => YiAction (r -> a) x where
+instance (YiAction a (), Promptable r) => YiAction (r -> a) () where
     makeAction f = YiA $ doPrompt (runAction . makeAction . f)
 
 -- | Tag a type with a documentation

@@ -96,7 +96,7 @@ parseCount = do
 
 data OptionAction = Set !Bool | Invert | Ask
 
-parseOption :: String -> (OptionAction -> Action) -> EventString -> Maybe ExCommand
+parseOption :: String -> (OptionAction -> (Action ())) -> EventString -> Maybe ExCommand
 parseOption name action = parse $ do
     void $ P.string "set "
     nos <- P.many (P.string "no")
@@ -198,7 +198,7 @@ normArg = P.many1 $
 -- of the opposite kind or space. However, it does allow escaping opposite kind like
 -- normal, as well as allowing escaping of space (is this normal behavior?).
 quoteArg :: Char -> P.GenParser Char () T.Text
-quoteArg delim = fmap T.pack $ P.char delim 
+quoteArg delim = fmap T.pack $ P.char delim
     *> (P.many1 $ P.noneOf (delim:"\\") <|> escapeChar)
     <* P.char delim
 

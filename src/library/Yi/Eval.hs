@@ -112,7 +112,7 @@ instance Default NamesCache where
     def = NamesCache []
 instance YiVariable NamesCache
 
-type HintRequest = (String, MVar (Either LHI.InterpreterError Action))
+type HintRequest = (String, MVar (Either LHI.InterpreterError (Action ())))
 newtype HintThreadVar = HintThreadVar (Maybe (MVar HintRequest))
   deriving (Typeable, Default)
 
@@ -149,10 +149,12 @@ hintEvaluatorThread request contextFile = do
       LHI.setTopLevelModules ["Env"]
 
     -- Yi.Keymap: Action lives there
-    LHI.setImportsQ [("Yi", Nothing), ("Yi.Keymap",Just "Yi.Keymap")]
+    LHI.setImportsQ [ ("Yi", Nothing), ("Yi.Keymap",Just "Yi.Keymap")
+                    , ("Control.Monad", Just "CM")]
     forever $ do
       (s,response) <- lift $ takeMVar request
-      res <- try $ LHI.interpret ("Yi.makeAction (" ++ s ++ ")") (LHI.as :: Action)
+      res <- try $ LHI.interpret
+               ("CM.void (Yi.makeAction (" ++ s ++ "))") (LHI.as :: (Action ()))
       lift $ putMVar response res
 
 -- Evaluator implemented by calling GHCi. This evaluator can run
@@ -211,7 +213,7 @@ ghciEvaluator = Evaluator { execEditorActionImpl = execAction
 -- * 'PublishedActions' evaluator
 
 newtype PublishedActions = PublishedActions {
-    _publishedActions :: M.HashMap String Action
+    _publishedActions :: M.HashMap String (Action ())
   } deriving(Typeable, Monoid)
 
 instance Default PublishedActions where def = mempty
@@ -221,12 +223,12 @@ instance YiConfigVariable PublishedActions
 
 -- | Accessor for the published actions. Consider using
 -- 'publishAction'.
-publishedActions :: Field (M.HashMap String Action)
+publishedActions :: Field (M.HashMap String (Action ()))
 publishedActions = customVariable . _publishedActionsA
 
 -- | Publish the given action, by the given name. This will overwrite
 -- any existing actions by the same name.
-publishAction :: (YiAction a x, Show x) => String -> a -> ConfigM ()
+publishAction :: YiAction a () => String -> a -> ConfigM ()
 publishAction s a = publishedActions %= M.insert s (makeAction a)
 
 -- | Evaluator based on a fixed list of published actions. Has a few

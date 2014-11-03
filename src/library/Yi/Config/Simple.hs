@@ -335,20 +335,20 @@ debug = debugModeA
 ----------- Startup hooks
 -- | Run when the editor is started (this is run after all actions
 -- which have already been registered)
-runOnStartup :: Action -> ConfigM ()
+runOnStartup :: Action () -> ConfigM ()
 runOnStartup action = runManyOnStartup [action]
 
 -- | List version of 'runOnStartup'.
-runManyOnStartup :: [Action] -> ConfigM ()
+runManyOnStartup :: [Action ()] -> ConfigM ()
 runManyOnStartup actions = startActions %= (++ actions)
 
 -- | Run after the startup actions have completed, or on reload (this
 -- is run after all actions which have already been registered)
-runAfterStartup :: Action -> ConfigM ()
+runAfterStartup :: Action () -> ConfigM ()
 runAfterStartup action = runManyAfterStartup [action]
 
 -- | List version of 'runAfterStartup'.
-runManyAfterStartup :: [Action] -> ConfigM ()
+runManyAfterStartup :: [Action ()] -> ConfigM ()
 runManyAfterStartup actions = initialActions %= (++ actions)
 
 ------------------------ Advanced
@@ -364,12 +364,12 @@ available above.
 
 -- | Actions to run when the editor is started. Consider using
 -- 'runOnStartup' or 'runManyOnStartup' instead.
-startActions :: Field [Action]
+startActions :: Field [Action ()]
 startActions = startActionsA
 
 -- | Actions to run after startup or reload. Consider using
 -- 'runAfterStartup' or 'runManyAfterStartup' instead.
-initialActions :: Field [Action]
+initialActions :: Field [Action ()]
 initialActions = initialActionsA
 
 -- | Default keymap to use.

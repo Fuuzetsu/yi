@@ -394,7 +394,7 @@ instance Monoid SupertabExt where
   (Supertab f) `mappend` (Supertab g) =
     Supertab $ \s -> f s `mplus` g s
 
-superTab :: (MonadInteract m Action Event) => Bool -> SupertabExt -> m ()
+superTab :: (MonadInteract m (Action ()) Event) => Bool -> SupertabExt -> m ()
 superTab caseSensitive (Supertab expander) =
     some (spec KTab ?>>! doSuperTab) >> deprioritize >>! resetComplete
   where

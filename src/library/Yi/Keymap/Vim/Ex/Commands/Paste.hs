@@ -25,12 +25,12 @@ import Yi.String (showT)
 parse :: EventString -> Maybe ExCommand
 parse = parseOption "paste" action
 
-action :: OptionAction -> Action
+action :: OptionAction -> Action ()
 action Ask = EditorA $ do
     value <- vsPaste <$> getEditorDyn
     printMsg $ "paste = " <> showT value
 action (Set b) = modPaste $ const b
 action Invert = modPaste not
 
-modPaste :: (Bool -> Bool) -> Action
+modPaste :: (Bool -> Bool) -> Action ()
 modPaste f = EditorA . modifyStateE $ \s -> s { vsPaste = f (vsPaste s) }

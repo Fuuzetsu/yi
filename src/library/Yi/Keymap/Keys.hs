@@ -25,7 +25,7 @@ module Yi.Keymap.Keys
 
 import Prelude hiding (error)
 
-import Control.Monad (unless)
+import Control.Monad (unless, void)
 import Data.Char
 import Data.List (sort, nub)
 
@@ -93,11 +93,11 @@ spec :: Key -> Event
 spec k = Event k []
 
 -- | > p >>! act = p >> 'write' act
-(>>!) :: (MonadInteract m Action Event, YiAction a x, Show x) => m b -> a -> m ()
+(>>!) :: (YiAction a1 x, MonadInteract m (Action ()) e, Show x) => m a -> a1 -> m ()
 p >>! act = p >> write act
 
 -- | > p >>=! act = p >>= 'write' . act
-(>>=!) :: (MonadInteract m Action Event, YiAction a x, Show x) => m b -> (b -> a) -> m ()
+(>>=!) :: (MonadInteract m (Action ()) Event, YiAction a x, Show x) => m b -> (b -> a) -> m ()
 p >>=! act = p >>= write . act
 
 -- | @ ev ?>> proc = 'event' ev >> proc @
@@ -105,7 +105,7 @@ p >>=! act = p >>= write . act
 ev ?>> proc = event ev >> proc
 
 -- | @ ev ?>>! act = 'event' ev >> 'write' act @
-(?>>!) :: (MonadInteract m Action Event, YiAction a x, Show x) => Event -> a -> m ()
+(?>>!) :: (MonadInteract m (Action ()) Event, YiAction a x, Show x) => Event -> a -> m ()
 ev ?>>! act = event ev >> write act
 
 -- | @ ev ?*>> proc = 'events' ev >> proc @
@@ -113,7 +113,7 @@ ev ?>>! act = event ev >> write act
 ev ?*>> proc = events ev >> proc
 
 -- | @ ev ?*>>! act = 'events' ev >> 'write' act @
-(?*>>!) :: (MonadInteract m Action Event, YiAction a x, Show x) => [Event] -> a -> m ()
+(?*>>!) :: (MonadInteract m (Action ()) Event, YiAction a x, Show x) => [Event] -> a -> m ()
 ev ?*>>! act = events ev >> write act
 
 infixl 1 >>!

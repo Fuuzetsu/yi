@@ -593,7 +593,7 @@ scrollB n = do
     void $ gotoLnFrom n
     (markPointA fr .=) =<< pointB
   w <- askWindow wkey
-  (%=) pointFollowsWindowA (\old w' -> ((w == w') || old w'))
+  pointFollowsWindowA %= (\old w' -> ((w == w') || old w'))
 
 
 -- Scroll line above window to the bottom.

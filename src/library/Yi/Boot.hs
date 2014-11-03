@@ -19,6 +19,7 @@ import qualified Config.Dyre as Dyre
 import qualified Config.Dyre.Options as Dyre
 import qualified Config.Dyre.Params as Dyre
 import           Config.Dyre.Relaunch
+import           Control.Monad (void)
 import           Control.Lens
 import           Data.Text ()
 import           System.Environment
@@ -43,9 +44,9 @@ realMain configs = restoreBinaryState Nothing >>= main configs
 -- The use of a separate activity prevents any other initial actions
 -- from immediately masking the output.
 showErrorsInConf :: (Config, ConsoleConfig) -> String -> (Config, ConsoleConfig)
-showErrorsInConf c errs = c & _1 . initialActionsA %~ (makeAction openErrBuf :)
+showErrorsInConf c errs = c & _1 . initialActionsA %~ (makeAction (void oe) :)
   where
-    openErrBuf = splitE >> newBufferE (MemBuffer "*errors*") (fromString errs)
+    oe = splitE >> newBufferE (MemBuffer "*errors*") (fromString errs)
 
 -- | Handy alias for 'yiDriver'.
 yi :: Config -> IO ()

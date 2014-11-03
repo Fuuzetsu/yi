@@ -165,7 +165,7 @@ runControl f = runReaderT (runControl'' f)
 
 -- runControlEditor f yiMVar = yiMVar
 
-runAction :: Action -> ControlM ()
+runAction :: Action () -> ControlM ()
 runAction action = do
     out <- liftYi $ asks yiOutput
     liftBase $ out MustRefresh [action]
@@ -262,7 +262,7 @@ getDimensionsInTab e tab = do
                     charWidth = Gtk.approximateCharWidth $ metrics v
                     b0 = findBufferWith (viewFBufRef v) e
                 rgn <- shownRegion e v b0
-                let ret= (windowRef v, round $ fromIntegral wi / charWidth, 
+                let ret= (windowRef v, round $ fromIntegral wi / charWidth,
                           round $ fromIntegral h / lineHeight, rgn)
                 return $ a <> [ret]
             Nothing -> return a)

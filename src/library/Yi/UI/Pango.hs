@@ -77,7 +77,7 @@ data UI = UI
     , uiNotebook  :: SimpleNotebook
     , uiStatusbar :: Statusbar
     , tabCache    :: IORef TabCache
-    , uiActionCh  :: Action -> IO ()
+    , uiActionCh  :: Action () -> IO ()
     , uiConfig    :: UIConfig
     , uiFont      :: IORef FontDescription
     , uiInput     :: IMContext
@@ -345,7 +345,7 @@ getWinInfo ui ref =
   in readIORef (tabCache ui) >>= (tabLoop . toList)
 
 -- | Make the cache from the editor and the action channel
-newCache :: Editor -> (Action -> IO ()) -> IO TabCache
+newCache :: Editor -> (Action () -> IO ()) -> IO TabCache
 newCache e actionCh = mapM (mkDummyTab actionCh) (e ^. tabsA)
 
 -- | Make a new tab, and populate it
@@ -358,7 +358,7 @@ newTab e ui tab = do
 -- | Make a minimal new tab, without any windows.
 -- This is just for bootstrapping the UI; 'newTab' should normally
 -- be called instead.
-mkDummyTab :: (Action -> IO ()) -> Tab -> IO TabInfo
+mkDummyTab :: (Action () -> IO ()) -> Tab -> IO TabInfo
 mkDummyTab actionCh tab = do
     ws <- newIORef M.empty
     ld <- layoutDisplayNew
@@ -893,7 +893,7 @@ handleMove :: UI -> WinInfo -> EventM EMotion Bool
 handleMove ui w = eventCoordinates >>= (io . selectArea ui w) >>
                   return True
 
-handleDividerMove :: (Action -> IO ()) -> DividerRef -> DividerPosition -> IO ()
+handleDividerMove :: (Action () -> IO ()) -> DividerRef -> DividerPosition -> IO ()
 handleDividerMove actionCh ref pos =
   actionCh (makeAction (setDividerPosE ref pos))
 

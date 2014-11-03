@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Yi.Config.Default ( defaultConfig, availableFrontends, defaultEmacsConfig
                          , defaultVimConfig, defaultCuaConfig, toVimStyleConfig
@@ -32,6 +33,7 @@ import qualified Yi.Keymap.Emacs  as Emacs
 import           Yi.Keymap.Keys
 import qualified Yi.Keymap.Vim  as Vim
 import           Yi.Layout
+import           Yi.MiniBuffer (Promptable)
 import qualified Yi.Mode.Abella as Abella
 import qualified Yi.Mode.Haskell as Haskell
 import           Yi.Mode.IReader (ireaderMode, ireadMode)
@@ -72,10 +74,10 @@ availableFrontends =
 -- Failing to conform to this rule exposes the code to instant deletion.
 --
 -- TODO: String → Text/YiString
-defaultPublishedActions :: HM.HashMap String Action
+defaultPublishedActions :: HM.HashMap String (Action ())
 defaultPublishedActions = HM.fromList
     [
-      ("atBoundaryB"            , box atBoundaryB)
+      ("atBoundaryB"            , boxvv atBoundaryB)
     , ("cabalBuildE"            , box cabalBuildE)
     , ("cabalConfigureE"        , box cabalConfigureE)
     , ("closeBufferE"           , box closeBufferE)
@@ -88,17 +90,17 @@ defaultPublishedActions = HM.fromList
     , ("ireadSaveAsArticle"     , box saveAsNewArticle)
     , ("leftB"                  , box leftB)
     , ("linePrefixSelectionB"   , box linePrefixSelectionB)
-    , ("lineStreamB"            , box lineStreamB)
+    , ("lineStreamB"            , boxv lineStreamB)
 --    , ("mkRegion"               , box mkRegion) -- can't make 'instance Promptable Region'
     , ("makeBuild"              , box makeBuild)
     , ("moveB"                  , box moveB)
-    , ("numberOfB"              , box numberOfB)
+    , ("numberOfB"              , boxvv numberOfB)
     , ("pointB"                 , box pointB)
-    , ("regionOfB"              , box regionOfB)
-    , ("regionOfPartB"          , box regionOfPartB)
-    , ("regionOfPartNonEmptyB"  , box regionOfPartNonEmptyB)
+    , ("regionOfB"              , boxv regionOfB)
+    , ("regionOfPartB"          , boxvv regionOfPartB)
+    , ("regionOfPartNonEmptyB"  , boxvv regionOfPartNonEmptyB)
     , ("reloadProjectE"         , box reloadProjectE)
-    , ("replaceString"          , box replaceString)
+    , ("replaceString"          , boxvv replaceString)
     , ("revertE"                , box revertE)
     , ("shell"                  , box shell)
     , ("searchSources"          , box searchSources)
@@ -107,12 +109,23 @@ defaultPublishedActions = HM.fromList
     , ("unLineCommentSelectionB", box unLineCommentSelectionB)
     , ("writeB"                 , box writeB)
     , ("ghciGet"                , box Haskell.ghciGet)
-    , ("abella"                 , box Abella.abella)
+    , ("abella"                 , boxv Abella.abella)
     ]
 
   where
-    box :: (Show x, YiAction a x) => a -> Action
-    box = makeAction
+    -- void nothing but final result
+    box :: (Show x, YiAction a x) => a -> Action ()
+    box = void . makeAction
+
+    -- void after one arg
+    boxv :: (Promptable a, YiAction (f ()) (), Functor f)
+         => (a -> f a1) -> Action ()
+    boxv x = makeAction (void . x)
+
+    -- void after two args
+    boxvv :: (Promptable t1, Promptable t, YiAction (f ()) (), Functor f)
+          => (t -> t1 -> f a) -> Action ()
+    boxvv x = makeAction (\y z -> void $ x y z)
 
 
 defaultConfig :: Config

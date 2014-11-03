@@ -60,6 +60,7 @@ module Yi.Keymap
     ) where
 
 import           Control.Exception
+import           Control.Monad (void)
 import           Control.Monad.Reader hiding (mapM_)
 import           Control.Monad.State hiding (mapM_)
 import           Yi.Buffer
@@ -75,8 +76,8 @@ import           Yi.Utils
 -- Keymap basics
 
 -- | @write a@ returns a keymap that just outputs the action @a@.
-write :: (I.MonadInteract m Action ev, YiAction a x, Show x) => a -> m ()
-write x = I.write (makeAction x)
+write :: (I.MonadInteract m (Action ()) e, YiAction a x, Show x) => a -> m ()
+write = I.write . void . makeAction
 
 --------------------------------
 -- Uninteresting glue code
@@ -103,7 +104,7 @@ handleJustE p h c = catchJustE p c h
 -- -------------------------------------------
 
 class YiAction a x | a -> x where
-    makeAction :: Show x => a -> Action
+    makeAction :: Show x => a -> Action x
 
 instance YiAction (IO x) x where
     makeAction = YiA . io
@@ -117,7 +118,7 @@ instance YiAction (EditorM x) x where
 instance YiAction (BufferM x) x where
     makeAction = BufferA
 
-instance YiAction Action () where
+instance YiAction (Action a) a where
     makeAction = id
 
 makeLensesWithSuffix "A" ''KeymapSet

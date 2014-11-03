@@ -216,8 +216,8 @@ emacsKeys univArg =
 
          -- Other meta key-bindings
          , meta (spec KBS)      ?>>! repeatingArg bkillWordB
-         , metaCh 'g' ?>>
-             optMod meta (char 'g') >>! (gotoLn . fromDoc :: Int ::: LineNumber -> BufferM Int)
+         , metaCh 'g' ?>> optMod meta (char 'g') >>!
+             (void . gotoLn . fromDoc :: Int ::: LineNumber -> BufferM ())
          ]
   where
   -- inserting the empty string prevents the deletion from appearing in the killring
